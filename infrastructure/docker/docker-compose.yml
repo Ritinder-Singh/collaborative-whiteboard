@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend-python-1
+      - backend-python-2
+    networks:
+      - whiteboard-network
+
+  # Python Backend Instance 1
+  backend-python-1:
+    build:
+      context: ../../backend/python
+      dockerfile: Dockerfile
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/whiteboard
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - whiteboard-network
+
+  # Python Backend Instance 2
+  backend-python-2:
+    build:
+      context: ../../backend/python
+      dockerfile: Dockerfile
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/whiteboard
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - whiteboard-network
+
+  # Redis for pub/sub and caching
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - whiteboard-network
+
+  # PostgreSQL for persistent storage
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=whiteboard
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - whiteboard-network
+
+volumes:
+  redis-data:
+  postgres-data:
+
+networks:
+  whiteboard-network:
+    driver: bridge
