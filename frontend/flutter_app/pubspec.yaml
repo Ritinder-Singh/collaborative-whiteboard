@@ -21,10 +21,12 @@ dependencies:
   # Networking
   socket_io_client: ^2.0.3+1
   dio: ^5.7.0
+  http: ^1.2.0
 
   # Local Storage
   sqflite: ^2.4.0
   hive_flutter: ^1.1.0
+  shared_preferences: ^2.3.0
 
   # Utilities
   uuid: ^4.5.0

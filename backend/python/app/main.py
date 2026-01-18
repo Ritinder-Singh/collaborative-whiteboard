@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.socket_handlers import sio
+from app.database import init_db, close_db
+from app.api import api_router
 
 # Configure logging
 logging.basicConfig(
@@ -25,7 +27,19 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     logger.info("Starting Collaborative Whiteboard server...")
     logger.info(f"Server running on {settings.host}:{settings.port}")
+
+    # Initialize database
+    try:
+        await init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.warning(f"Database initialization failed: {e}")
+        logger.info("Server will continue without database (use init.sql manually)")
+
     yield
+
+    # Cleanup
+    await close_db()
     logger.info("Shutting down server...")
 
 
@@ -45,6 +59,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Include API routes
+app.include_router(api_router, prefix="/api")
 
 
 # Health check endpoint

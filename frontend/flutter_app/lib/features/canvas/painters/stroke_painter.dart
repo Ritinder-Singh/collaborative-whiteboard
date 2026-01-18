@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 import 'package:collaborative_whiteboard/data/models/stroke.dart';
@@ -10,6 +9,7 @@ class StrokePainter extends CustomPainter {
   final Map<String, Stroke> remoteStrokes;
   final Offset canvasOffset;
   final double canvasScale;
+  final Map<String, double> layerOpacities;
 
   StrokePainter({
     required this.strokes,
@@ -17,6 +17,7 @@ class StrokePainter extends CustomPainter {
     this.remoteStrokes = const {},
     this.canvasOffset = Offset.zero,
     this.canvasScale = 1.0,
+    this.layerOpacities = const {},
   });
 
   @override
@@ -48,8 +49,12 @@ class StrokePainter extends CustomPainter {
   void _drawStroke(Canvas canvas, Stroke stroke) {
     if (stroke.points.isEmpty) return;
 
+    // Apply layer opacity
+    final layerOpacity = layerOpacities[stroke.layerId] ?? 1.0;
+    final strokeColor = stroke.color.withOpacity(stroke.color.opacity * layerOpacity);
+
     final paint = Paint()
-      ..color = stroke.color
+      ..color = strokeColor
       ..style = PaintingStyle.fill
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
@@ -91,10 +96,10 @@ class StrokePainter extends CustomPainter {
     // Draw the stroke as a filled path
     final path = Path();
 
-    path.moveTo(outlinePoints.first.x, outlinePoints.first.y);
+    path.moveTo(outlinePoints.first.dx, outlinePoints.first.dy);
 
     for (int i = 1; i < outlinePoints.length; i++) {
-      path.lineTo(outlinePoints[i].x, outlinePoints[i].y);
+      path.lineTo(outlinePoints[i].dx, outlinePoints[i].dy);
     }
 
     path.close();
@@ -107,7 +112,8 @@ class StrokePainter extends CustomPainter {
         currentStroke != oldDelegate.currentStroke ||
         remoteStrokes != oldDelegate.remoteStrokes ||
         canvasOffset != oldDelegate.canvasOffset ||
-        canvasScale != oldDelegate.canvasScale;
+        canvasScale != oldDelegate.canvasScale ||
+        layerOpacities != oldDelegate.layerOpacities;
   }
 }
 
